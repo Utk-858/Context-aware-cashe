@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "rag_cache"
+version = "0.1.0"
+description = "A clean, extensible cache for RAG (Retrieval-Augmented Generation) applications."
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "rag_cache"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^2.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,10 @@
+# requirements.txt
+# Core data schemas
+pydantic>=2.0.0
+
+# Optional: Add when migrating to real local embeddings
+sentence-transformers>=2.2.2 
+
+# Optional: Add when moving from InMemory to real Vector DBs
+# faiss-cpu>=1.7.4 # Or pinecone-client, chromadb, etc.
+# redis>=5.0.0 
