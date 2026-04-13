@@ -20,7 +20,7 @@ Unlike traditional caches, it ensures:
 
 ### Before (Traditional RAG Pipeline)
 
-![Traditional RAG Pipeline Architecture](https://res.cloudinary.com/dqskebjcf/image/upload/v1776038409/cashe1_zg74ca.png)
+<img src="https://res.cloudinary.com/dqskebjcf/image/upload/v1776038409/cashe1_zg74ca.png" alt="Traditional RAG Pipeline Architecture" width="700">
 *Every single query blindly pays the latency and monetary penalty of querying both external networks.*
 
 ```python
@@ -33,7 +33,7 @@ return response
 
 ### After (With RAGCache)
 
-![RAGCache Optimized Architecture](https://res.cloudinary.com/dqskebjcf/image/upload/q_auto/f_auto/v1776038409/cashe2_ghyrbk.png)
+<img src="https://res.cloudinary.com/dqskebjcf/image/upload/q_auto/f_auto/v1776038409/cashe2_ghyrbk.png" alt="RAGCache Optimized Architecture" width="700">
 
 ```python
 from rag_cache.facade import UnifiedRAGCache
@@ -100,7 +100,7 @@ Return response
 
 # High-Level Architecture
 
-![Full RAGCache System Architecture Flowchart](https://res.cloudinary.com/dqskebjcf/image/upload/v1776038732/cashe4_mrgssh.png)
+<img src="https://res.cloudinary.com/dqskebjcf/image/upload/v1776038732/cashe4_mrgssh.png" alt="Full RAGCache System Architecture Flowchart" width="700">
 
 ---
 
