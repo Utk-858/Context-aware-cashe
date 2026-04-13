@@ -100,7 +100,7 @@ Return response
 
 # High-Level Architecture
 
-![Full RAGCache System Architecture Flowchart](https://res.cloudinary.com/dqskebjcf/image/upload/q_auto/f_auto/v1776038409/cash3_yfldzs.png)
+![Full RAGCache System Architecture Flowchart](https://res.cloudinary.com/dqskebjcf/image/upload/v1776038732/cashe4_mrgssh.png)
 
 ---
 
