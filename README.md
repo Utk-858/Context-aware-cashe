@@ -1,26 +1,26 @@
-# 🧠 Context-aware-cache — Detailed Architecture & Internal Working
+# Context-aware-cache — Detailed Architecture & Internal Working
 
 ---
 
-# 📌 Overview
+# Overview
 
 RAGCache is a **context-aware, multi-level caching system** designed for Retrieval-Augmented Generation (RAG) pipelines.
 
 Unlike traditional caches, it ensures:
 
-* ✅ Correctness (no wrong reuse)
-* ⚡ Performance (reduces LLM calls)
-* 🧠 Intelligence (uses semantic + context + intent signals)
+* Correctness (no wrong reuse)
+* Performance (reduces LLM calls)
+* Intelligence (uses semantic + context + intent signals)
 
 ---
 
-# 🧩 Developer Integration (Plug-and-Play)
+# Developer Integration (Plug-and-Play)
 
-## 🚀 How to Use RAGCache in Your Existing Pipeline
+## How to Use RAGCache in Your Existing Pipeline
 
-### 🔹 Before (Traditional RAG Pipeline)
+### Before (Traditional RAG Pipeline)
 
-![Traditional RAG Pipeline Architecture](./docs/images/traditional_rag_pipeline.png)
+![Traditional RAG Pipeline Architecture](https://res.cloudinary.com/dqskebjcf/image/upload/v1776038409/cashe1_zg74ca.png)
 *Every single query blindly pays the latency and monetary penalty of querying both external networks.*
 
 ```python
@@ -31,9 +31,9 @@ return response
 
 ---
 
-### 🔹 After (With RAGCache)
+### After (With RAGCache)
 
-![RAGCache Optimized Architecture](./docs/images/rag_cache_optimized.png)
+![RAGCache Optimized Architecture](https://res.cloudinary.com/dqskebjcf/image/upload/q_auto/f_auto/v1776038409/cashe2_ghyrbk.png)
 
 ```python
 from rag_cache.facade import UnifiedRAGCache
@@ -51,7 +51,7 @@ return result["answer"]
 
 ---
 
-## ⚙️ What Developer Needs to Provide
+## What Developer Needs to Provide
 
 ```
 1. retriever(query) → List[doc_ids]
@@ -60,7 +60,7 @@ return result["answer"]
 
 ---
 
-## 🧠 What RAGCache Handles Automatically
+## What RAGCache Handles Automatically
 
 * L1 caching (retrieval optimization)
 * L2 caching (LLM response reuse)
@@ -72,7 +72,7 @@ return result["answer"]
 
 ---
 
-## 🔁 Internal Execution Flow (From Developer POV)
+## Internal Execution Flow (From Developer POV)
 
 ```
 cache.run(query)
@@ -92,19 +92,19 @@ Return response
 
 ---
 
-## 🎯 Key Benefit
+## Key Benefit
 
 > Wrap your existing RAG pipeline with a single function call and automatically reduce LLM calls while preserving correctness.
 
 ---
 
-# 🏗️ High-Level Architecture
+# High-Level Architecture
 
-![Full RAGCache System Architecture Flowchart](./docs/images/full_system_architecture.png)
+![Full RAGCache System Architecture Flowchart](https://res.cloudinary.com/dqskebjcf/image/upload/v1776038409/cash3_yfldzs.png)
 
 ---
 
-# 🧩 Core Modules
+# Core Modules
 
 ## 1. UnifiedRAGCache (Facade)
 
@@ -167,7 +167,7 @@ Query → KV lookup → not found
 
 ---
 
-# 🧠 3. L2 Cache (Generation Cache)
+# 3. L2 Cache (Generation Cache)
 
 ### Purpose
 
@@ -208,7 +208,7 @@ cache_id → response
 
 ---
 
-# 🔄 L2 HIT Flow
+# L2 HIT Flow
 
 ```
 Query
@@ -228,7 +228,7 @@ Return response
 
 ---
 
-# ❌ L2 MISS Flow
+# L2 MISS Flow
 
 ```
 Query
@@ -248,7 +248,7 @@ Return response
 
 ---
 
-# ⚖️ 4. Decision Engine (Core Logic)
+# 4. Decision Engine (Core Logic)
 
 ### Purpose
 
@@ -281,7 +281,7 @@ ELSE → MISS
 
 ---
 
-# 📐 5. Similarity Calculation
+# 5. Similarity Calculation
 
 ### Method: Cosine Similarity
 
@@ -314,7 +314,7 @@ Where:
 
 ---
 
-# 📄 6. Document Overlap Calculation
+# 6. Document Overlap Calculation
 
 ### Method: Jaccard Similarity
 
@@ -345,7 +345,7 @@ overlap = 1/3 ≈ 0.33
 
 ---
 
-# 🎯 7. Intent Matching
+# 7. Intent Matching
 
 ### Purpose
 
@@ -382,7 +382,7 @@ relaxed → compatible intents allowed
 
 ---
 
-# 🧠 8. KV Store (Detailed)
+# 8. KV Store (Detailed)
 
 ### Purpose
 
@@ -421,7 +421,7 @@ cache_id → response
 
 ---
 
-# 🔍 9. Vector Store (Detailed)
+# 9. Vector Store (Detailed)
 
 ### Purpose
 
@@ -452,7 +452,7 @@ query → embedding → similarity search → top-k results
 
 ---
 
-# 🔁 10. End-to-End Flow
+# 10. End-to-End Flow
 
 ```
 Query
@@ -476,7 +476,7 @@ Store in L1 + L2
 
 ---
 
-# ⚠️ 11. Eviction (LRU)
+# 11. Eviction (LRU)
 
 ### Purpose
 
@@ -500,7 +500,7 @@ if size > max_entries:
 
 ---
 
-# 🧠 12. Key Design Principles
+# 12. Key Design Principles
 
 * Separation of concerns
 * Context-aware validation
@@ -509,26 +509,26 @@ if size > max_entries:
 
 ---
 
-# 📊 Benchmarks & Performance ROI
+# Benchmarks & Performance ROI
 
 We simulated a realistic RAG workload mixing **Pioneering Queries** (new topics), **Semantic Queries** (differently worded but logically identical), and **Repetitive Queries** (exact string repeats) across 10 execution cycles using our standard test dataset.
 
-### 📉 Results without caching (Baseline):
+### Results without caching (Baseline):
 * **Execution Strategy:** 10 Vector DB lookups + 10 LLM Generative calls
 * **Total Latency:** ~15.00 seconds
 
-### 🚀 Results with RAGCache (L1 + L2 Dual-Layer):
+### Results with RAGCache (L1 + L2 Dual-Layer):
 * **Execution Strategy:** 4 Vector DB lookups + 4 LLM Generative calls 
 * **Total Latency:** ~6.50 seconds
 
-### 💰 Optimization Impact
+### Optimization Impact
 * **Speedup Factor:** Pipeline executes **2.3x Faster**.
 * **Cost Savings:** OpenAI/Anthropic API token burn rate reduced by **60% ELIMINATION RATE** with absolutely zero loss in contextual accuracy.
 * **Latency Mitigation:** Absorbed ~8.5 seconds of raw user wait time natively.
 
 ---
 
-# 🔥 Final Summary
+# Final Summary
 
 RAGCache is:
 
@@ -536,7 +536,7 @@ RAGCache is:
 
 ---
 
-# 🚀 Future Improvements
+# Future Improvements
 
 * TTL-based eviction
 * Adaptive thresholds
