@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class IntentClassifier(ABC):
     @abstractmethod
     def classify(self, query: str) -> str:

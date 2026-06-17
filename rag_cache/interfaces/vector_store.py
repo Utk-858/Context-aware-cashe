@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 
 class VectorStore(ABC):
     @abstractmethod
-    def search(self, query_vector: List[float], top_k: int = 5, *args, **kwargs) -> List[Dict[str, Any]]:
+    def search(
+        self, query_vector: List[float], top_k: int = 5, *args, **kwargs
+    ) -> List[Dict[str, Any]]:
         """
         Search the index for the closest matches to the query vector.
         Returns a list of dictionaries containing chunk IDs, scores, and raw content/metadata.
@@ -11,7 +14,14 @@ class VectorStore(ABC):
         pass
 
     @abstractmethod
-    def upsert(self, ids: List[str], vectors: List[List[float]], metadata: List[Dict[str, Any]] = None, *args, **kwargs) -> None:
+    def upsert(
+        self,
+        ids: List[str],
+        vectors: List[List[float]],
+        metadata: Optional[List[Dict[str, Any]]] = None,
+        *args,
+        **kwargs,
+    ) -> None:
         """Insert or update document chunks and their associated embeddings in the store."""
         pass
 

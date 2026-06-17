@@ -1,13 +1,15 @@
 import re
+
 from rag_cache.interfaces.intent import IntentClassifier
+
 
 class RuleBasedIntentClassifier(IntentClassifier):
     """
-    A simple, fast keyword-based fallback intent classifier. 
+    A simple, fast keyword-based fallback intent classifier.
     Satisfies the IntentClassifier interface so it can be cleanly swapped out
     for an LLM-based or small-embedding-based classifier in production.
     """
-    
+
     def __init__(self):
         # Heuristics mapped to intent categories. Checked in order.
         self.rules = {
@@ -16,17 +18,15 @@ class RuleBasedIntentClassifier(IntentClassifier):
             ],
             "analytical": [
                 r"\b(compare|analyze|evaluate|trend|stats|average|difference|metrics|performance)\b",
-                r"\b(why did|how many|how much)\b"
+                r"\b(why did|how many|how much)\b",
             ],
-            "navigation": [
-                r"\b(go to|show me|navigate|open|where is|link|page|url|dashboard)\b"
-            ],
+            "navigation": [r"\b(go to|show me|navigate|open|where is|link|page|url|dashboard)\b"],
             "informational": [
                 r"\b(what|who|when|where|how|explain|describe|define)\b",
-                r"\b(is|are|details|info)\b"
+                r"\b(is|are|details|info)\b",
             ],
         }
-        
+
         # Precompile to avoid overhead per-query
         self.compiled_rules = {
             intent: [re.compile(pattern, re.IGNORECASE) for pattern in patterns]

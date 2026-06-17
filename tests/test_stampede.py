@@ -1,8 +1,11 @@
 import time
-import redis
-import pytest
 from concurrent.futures import ThreadPoolExecutor
+
+import pytest
+import redis
+
 from rag_cache import RAGCache
+
 
 def test_cache_stampede_protection():
     """Verify that multiple concurrent queries trigger only 1 retriever and 1 LLM execution."""
@@ -34,12 +37,7 @@ def test_cache_stampede_protection():
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [
-            executor.submit(
-                cache.run,
-                query=query,
-                retriever=mock_retriever,
-                llm=mock_llm
-            )
+            executor.submit(cache.run, query=query, retriever=mock_retriever, llm=mock_llm)
             for _ in range(num_threads)
         ]
         results = [f.result() for f in futures]
@@ -58,7 +56,9 @@ def test_cache_stampede_protection():
     followers = [r for r in results if r["cache_hit"] is True]
 
     assert len(leaders) == 1, f"Expected 1 leader, got {len(leaders)}"
-    assert len(followers) == num_threads - 1, f"Expected {num_threads - 1} followers, got {len(followers)}"
+    assert (
+        len(followers) == num_threads - 1
+    ), f"Expected {num_threads - 1} followers, got {len(followers)}"
 
 
 def test_isolated_tenant_stampedes():
@@ -97,10 +97,10 @@ def test_isolated_tenant_stampedes():
                 retriever=lambda q, tenant=t: mock_retriever(q, tenant),
                 llm=lambda q, docs, tenant=t: mock_llm(q, docs, tenant),
                 tenant_id=t,
-                scope="tenant"
+                scope="tenant",
             )
             futures.append((t, fut))
-        
+
         results = [(t, f.result()) for t, f in futures]
 
     # Verify answers are correct

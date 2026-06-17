@@ -1,7 +1,10 @@
-from typing import Dict, Any, Optional
 import json
+from typing import Any, Dict, Optional
+
 import redis
+
 from rag_cache.interfaces.key_value_store import KeyValueStore
+
 
 class RedisKeyValueStore(KeyValueStore):
     """
@@ -9,13 +12,14 @@ class RedisKeyValueStore(KeyValueStore):
     Implements KeyValueStore with connection pooling, custom naming strategies,
     flexible TTL options, robust JSON serialization, and tenant isolation preparation.
     """
+
     def __init__(
         self,
         redis_url: str = "redis://localhost:6379/0",
         default_ttl: Optional[int] = None,
         tenant_id: Optional[str] = None,
         max_connections: int = 50,
-        socket_timeout: float = 5.0
+        socket_timeout: float = 5.0,
     ):
         self.default_ttl = default_ttl
         self.tenant_id = tenant_id
@@ -25,7 +29,7 @@ class RedisKeyValueStore(KeyValueStore):
             redis_url,
             max_connections=max_connections,
             socket_timeout=socket_timeout,
-            decode_responses=True  # Automatically decodes Redis replies to unicode strings
+            decode_responses=True,  # Automatically decodes Redis replies to unicode strings
         )
         self.client = redis.Redis(connection_pool=self.pool)
 
@@ -40,16 +44,16 @@ class RedisKeyValueStore(KeyValueStore):
         """
         if key.startswith("metrics:"):
             key_type = "metrics"
-            base_key = key[len("metrics:"):]
+            base_key = key[len("metrics:") :]
         elif key.startswith("retrieval:"):
             key_type = "l1"
-            base_key = key[len("retrieval:"):]
+            base_key = key[len("retrieval:") :]
         elif key.startswith("map:"):
             key_type = "map"
-            base_key = key[len("map:"):]
+            base_key = key[len("map:") :]
         elif key.startswith("lock:"):
             key_type = "lock"
-            base_key = key[len("lock:"):]
+            base_key = key[len("lock:") :]
         else:
             key_type = "l2"
             base_key = key
@@ -74,87 +78,125 @@ class RedisKeyValueStore(KeyValueStore):
         """Fetch value from Redis, deserializing it back to dict. Fail-safe on connection errors."""
         redis_key = self._resolve_redis_key(key, tenant_id=tenant_id)
         import time
+
         from rag_cache.core.observability import REDIS_LATENCY, get_tenant_label
+
         start_time = time.time()
         try:
             val = self.client.get(redis_key)
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="get").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="get").observe(
+                duration
+            )
             if val is not None:
                 return json.loads(val)
         except Exception:
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="get").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="get").observe(
+                duration
+            )
             # Fallback gracefully (behave as a cache miss) in production env
             pass
         return None
 
-    def set(self, key: str, value: Dict[str, Any], ttl_seconds: Optional[int] = None, tenant_id: Optional[str] = None) -> None:
+    def set(
+        self,
+        key: str,
+        value: Dict[str, Any],
+        ttl_seconds: Optional[int] = None,
+        tenant_id: Optional[str] = None,
+    ) -> None:
         """Save serialized JSON string to Redis. Expiry is set based on hierarchy: write TTL > default TTL."""
         redis_key = self._resolve_redis_key(key, tenant_id=tenant_id)
         expire = ttl_seconds if ttl_seconds is not None else self.default_ttl
         import time
+
         from rag_cache.core.observability import REDIS_LATENCY, get_tenant_label
+
         serialized = json.dumps(value)
         start_time = time.time()
         try:
             self.client.set(redis_key, serialized, ex=expire)
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="set").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="set").observe(
+                duration
+            )
         except Exception:
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="set").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="set").observe(
+                duration
+            )
             pass
 
     def delete(self, key: str, tenant_id: Optional[str] = None) -> bool:
         """Remove key from Redis. Returns True if deleted successfully."""
         redis_key = self._resolve_redis_key(key, tenant_id=tenant_id)
         import time
+
         from rag_cache.core.observability import REDIS_LATENCY, get_tenant_label
+
         start_time = time.time()
         try:
             res = bool(self.client.delete(redis_key))
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="delete").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="delete").observe(
+                duration
+            )
             return res
         except Exception:
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="delete").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="delete").observe(
+                duration
+            )
             return False
 
     def exists(self, key: str, tenant_id: Optional[str] = None) -> bool:
         """Check if key exists in Redis."""
         redis_key = self._resolve_redis_key(key, tenant_id=tenant_id)
         import time
+
         from rag_cache.core.observability import REDIS_LATENCY, get_tenant_label
+
         start_time = time.time()
         try:
             res = bool(self.client.exists(redis_key))
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="exists").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="exists").observe(
+                duration
+            )
             return res
         except Exception:
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="exists").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="exists").observe(
+                duration
+            )
             return False
 
     def incr(self, key: str, tenant_id: Optional[str] = None) -> int:
         """Atomic integer increment helper for metrics logging."""
         redis_key = self._resolve_redis_key(key, tenant_id=tenant_id)
         import time
+
         from rag_cache.core.observability import REDIS_LATENCY, get_tenant_label
+
         start_time = time.time()
         try:
             res = self.client.incr(redis_key)
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="incr").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="incr").observe(
+                duration
+            )
             return res
         except Exception:
             duration = time.time() - start_time
-            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="incr").observe(duration)
+            REDIS_LATENCY.labels(tenant_id=get_tenant_label(tenant_id), operation="incr").observe(
+                duration
+            )
             return 0
 
-    def acquire_lock(self, key: str, value: str, expire_ms: int, tenant_id: Optional[str] = None) -> bool:
+    def acquire_lock(
+        self, key: str, value: str, expire_ms: int, tenant_id: Optional[str] = None
+    ) -> bool:
         """
         Attempts to acquire a distributed lock in Redis.
         Uses non-blocking SET NX PX.

@@ -1,12 +1,14 @@
 from typing import List
+
 from rag_cache.interfaces.embedding import Embedder
+
 
 class SentenceTransformerEmbedder(Embedder):
     """
     A production-ready offline embedding integration using sentence-transformers.
     Defaults to 'all-MiniLM-L6-v2'.
     """
-    
+
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         try:
             from sentence_transformers import SentenceTransformer
@@ -15,7 +17,7 @@ class SentenceTransformerEmbedder(Embedder):
                 "The 'sentence-transformers' library is not installed. "
                 "Please install it via `pip install sentence-transformers`."
             )
-            
+
         # The model will be downloaded automatically the first time this is instantiated
         self.model = SentenceTransformer(model_name)
 

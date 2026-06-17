@@ -72,6 +72,7 @@ exclude = '''
   | \.mypy_cache
   | \.tox
   | \.venv
+  | venv
   | _build
   | buck-out
   | build
@@ -83,3 +84,19 @@ exclude = '''
 profile = "black"
 line_length = 100
 multi_line_output = 3
+skip = ["venv"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "redis",
+    "yaml",
+    "faiss",
+    "sentence_transformers",
+    "prometheus_client"
+]
+ignore_missing_imports = true
+
+

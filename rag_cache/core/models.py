@@ -1,10 +1,12 @@
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
 import time
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
 
 @dataclass
 class ResolveInput:
     """Payload required to query the cache for an existing answer."""
+
     query: str
     doc_ids: List[str]
     intent: str = "default"
@@ -22,6 +24,7 @@ class ResolveInput:
 @dataclass
 class StoreInput:
     """Payload required to save a newly generated LLM response into the cache."""
+
     query: str
     response: str
     doc_ids: List[str]
@@ -40,6 +43,7 @@ class StoreInput:
 @dataclass
 class CacheEntry:
     """The normalized object serialized and stored in the KeyValueStore."""
+
     query: str
     response: str
     doc_ids: List[str]
@@ -59,6 +63,7 @@ class CacheEntry:
 @dataclass
 class CacheResult:
     """The result returned to the user upon attempting to resolve cache."""
+
     hit: bool
     response: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None

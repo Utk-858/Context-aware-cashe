@@ -1,11 +1,13 @@
-from typing import List, Optional, Callable, Dict, Any, Tuple
 import warnings
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from rag_cache.core.cache import RetrievalCache, GenerationCache
-from rag_cache.core.models import ResolveInput, StoreInput
+from rag_cache.core.cache import GenerationCache, RetrievalCache
+from rag_cache.core.config import RAGCacheConfig
 from rag_cache.core.decision_engine import DecisionEngine
 from rag_cache.core.default_intent import RuleBasedIntentClassifier
-from rag_cache.core.config import RAGCacheConfig
+from rag_cache.core.models import ResolveInput, StoreInput
+from rag_cache.interfaces.embedding import Embedder
+from rag_cache.interfaces.vector_store import VectorStore
 
 
 class UnifiedRAGCache:
@@ -23,11 +25,7 @@ class UnifiedRAGCache:
     - Automatic caching
     """
 
-    def __init__(
-        self,
-        config: Optional[RAGCacheConfig] = None,
-        **kwargs
-    ):
+    def __init__(self, config: Optional[RAGCacheConfig] = None, **kwargs):
         # 1. Load config if not explicitly provided
         if config is None:
             config = RAGCacheConfig.load()
@@ -43,30 +41,31 @@ class UnifiedRAGCache:
         self.debug = config.debug
 
         # Local imports to keep dependencies optional
-        from rag_cache.integrations.key_value_stores.redis import RedisKeyValueStore
         from rag_cache.integrations.embeddings.mock import MockEmbedder
+        from rag_cache.integrations.key_value_stores.redis import RedisKeyValueStore
 
-        kv = RedisKeyValueStore(
-            redis_url=config.redis_url,
-            tenant_id=config.tenant_id
-        )
+        kv = RedisKeyValueStore(redis_url=config.redis_url, tenant_id=config.tenant_id)
         self.kv = kv
 
         if config.prometheus_port is not None:
             from rag_cache.core.observability import start_metrics_server
+
             start_metrics_server(port=config.prometheus_port)
 
+        vector_db: VectorStore
         if config.use_faiss:
             from rag_cache.integrations.vector_stores.faiss import FaissVectorStore
+
             vector_db = FaissVectorStore(
                 dimension=config.faiss_dimension,
                 redis_url=config.redis_url,
                 tenant_id=config.tenant_id,
                 index_filepath=config.faiss_index_filepath,
-                kv_store=kv
+                kv_store=kv,
             )
         else:
             from rag_cache.integrations.vector_stores.in_memory import InMemoryVectorStore
+
             vector_db = InMemoryVectorStore()
 
         # -----------------------------
@@ -77,10 +76,13 @@ class UnifiedRAGCache:
         # -----------------------------
         # L2: Embedding Setup
         # -----------------------------
-        embedder = MockEmbedder()
+        embedder: Embedder = MockEmbedder()
         if config.use_local_embeddings:
             try:
-                from rag_cache.integrations.embeddings.sentence_transformer import SentenceTransformerEmbedder
+                from rag_cache.integrations.embeddings.sentence_transformer import (
+                    SentenceTransformerEmbedder,
+                )
+
                 embedder = SentenceTransformerEmbedder()
             except ImportError:
                 warnings.warn("sentence_transformers not found. Falling back to MockEmbedder.")
@@ -96,7 +98,7 @@ class UnifiedRAGCache:
             decision_engine=DecisionEngine(config=config),
             bypass_intents=config.bypass_intents,
             debug_mode=config.debug,
-            ttl_seconds=config.l2_ttl_seconds
+            ttl_seconds=config.l2_ttl_seconds,
         )
 
     @classmethod
@@ -121,7 +123,7 @@ class UnifiedRAGCache:
         doc_ids: List[str],
         tenant_id: Optional[str] = None,
         user_id: Optional[str] = None,
-        scope: str = "tenant"
+        scope: str = "tenant",
     ) -> Optional[str]:
         """
         Step-by-step L2 semantic generation cache lookup.
@@ -130,11 +132,7 @@ class UnifiedRAGCache:
         active_tenant = tenant_id if tenant_id is not None else self.kv.tenant_id
         result, _ = self.generation_layer.resolve(
             ResolveInput(
-                query=query,
-                doc_ids=doc_ids,
-                tenant_id=active_tenant,
-                user_id=user_id,
-                scope=scope
+                query=query, doc_ids=doc_ids, tenant_id=active_tenant, user_id=user_id, scope=scope
             )
         )
         return result.response if result.hit else None
@@ -146,7 +144,7 @@ class UnifiedRAGCache:
         response: str,
         tenant_id: Optional[str] = None,
         user_id: Optional[str] = None,
-        scope: str = "tenant"
+        scope: str = "tenant",
     ) -> None:
         """
         Step-by-step dual-write cache store.
@@ -161,7 +159,7 @@ class UnifiedRAGCache:
                 response=response,
                 tenant_id=active_tenant,
                 user_id=user_id,
-                scope=scope
+                scope=scope,
             )
         )
 
@@ -170,7 +168,7 @@ class UnifiedRAGCache:
         lock_name: str,
         execute_fn: Callable[[], Any],
         check_cache_fn: Callable[[], Any],
-        tenant_id: Optional[str] = None
+        tenant_id: Optional[str] = None,
     ) -> Tuple[Any, bool]:
         """
         Executes a downstream function with distributed lock coalescing.
@@ -178,8 +176,8 @@ class UnifiedRAGCache:
         falls back to direct execution.
         Returns (result, hit_during_wait).
         """
-        import uuid
         import time
+        import uuid
 
         if not self.config.stampede_protection:
             return execute_fn(), False
@@ -192,7 +190,7 @@ class UnifiedRAGCache:
             key=lock_name,
             value=lock_token,
             expire_ms=self.config.lock_timeout_ms,
-            tenant_id=tenant_id
+            tenant_id=tenant_id,
         )
 
         if acquired:
@@ -228,7 +226,7 @@ class UnifiedRAGCache:
         llm: Callable[[str, List[str]], str],
         tenant_id: Optional[str] = None,
         user_id: Optional[str] = None,
-        scope: str = "tenant"
+        scope: str = "tenant",
     ) -> Dict[str, Any]:
         """
         Executes full RAG pipeline with caching.
@@ -248,7 +246,9 @@ class UnifiedRAGCache:
                 - source ("L1", "L2", "LLM")
         """
         import time
+
         from rag_cache.core.observability import TOTAL_REQUEST_LATENCY, get_tenant_label
+
         start_req = time.time()
 
         # Resolve the active tenant context
@@ -270,7 +270,8 @@ class UnifiedRAGCache:
                 print("❌ L1 MISS: Calling retriever")
 
             import hashlib
-            query_hash = hashlib.sha256(query.encode('utf-8')).hexdigest()
+
+            query_hash = hashlib.sha256(query.encode("utf-8")).hexdigest()
 
             def run_retriever():
                 docs = retriever(query)
@@ -281,19 +282,18 @@ class UnifiedRAGCache:
                 lock_name=f"retrieval:{query_hash}",
                 execute_fn=run_retriever,
                 check_cache_fn=lambda: self.retrieval_layer.resolve(query, tenant_id=active_tenant),
-                tenant_id=active_tenant
+                tenant_id=active_tenant,
             )
+
+        if doc_ids is None:
+            doc_ids = []
 
         # -----------------------------
         # Step 2: L2 Generation Cache
         # -----------------------------
         result, reason = self.generation_layer.resolve(
             ResolveInput(
-                query=query,
-                doc_ids=doc_ids,
-                tenant_id=active_tenant,
-                user_id=user_id,
-                scope=scope
+                query=query, doc_ids=doc_ids, tenant_id=active_tenant, user_id=user_id, scope=scope
             )
         )
 
@@ -304,21 +304,20 @@ class UnifiedRAGCache:
             # Increment hit counter in Redis
             self.kv.incr("metrics:hits", tenant_id=active_tenant)
 
-            TOTAL_REQUEST_LATENCY.labels(tenant_id=get_tenant_label(active_tenant), cache_hit="true").observe(time.time() - start_req)
+            TOTAL_REQUEST_LATENCY.labels(
+                tenant_id=get_tenant_label(active_tenant), cache_hit="true"
+            ).observe(time.time() - start_req)
             self._update_gauges()
-            return {
-                "answer": result.response,
-                "cache_hit": True,
-                "source": "L2"
-            }
+            return {"answer": result.response, "cache_hit": True, "source": "L2"}
 
         if self.debug:
             print(f"❌ L2 MISS: {reason}")
             print("... Falling back to LLM ...")
 
         import hashlib
+
         doc_str = "".join(doc_ids)
-        l2_lock_name = hashlib.sha256((query + ":" + doc_str).encode('utf-8')).hexdigest()
+        l2_lock_name = hashlib.sha256((query + ":" + doc_str).encode("utf-8")).hexdigest()
 
         def run_llm():
             # Increment miss counter in Redis for leader
@@ -331,7 +330,7 @@ class UnifiedRAGCache:
                     response=ans,
                     tenant_id=active_tenant,
                     user_id=user_id,
-                    scope=scope
+                    scope=scope,
                 )
             )
             return ans
@@ -343,7 +342,7 @@ class UnifiedRAGCache:
                     doc_ids=doc_ids,
                     tenant_id=active_tenant,
                     user_id=user_id,
-                    scope=scope
+                    scope=scope,
                 )
             )
             return res.response if res.hit else None
@@ -352,36 +351,37 @@ class UnifiedRAGCache:
             lock_name=f"l2:{l2_lock_name}",
             execute_fn=run_llm,
             check_cache_fn=check_l2_cache,
-            tenant_id=active_tenant
+            tenant_id=active_tenant,
         )
 
         if hit_during_wait:
             self.kv.incr("metrics:hits", tenant_id=active_tenant)
-            TOTAL_REQUEST_LATENCY.labels(tenant_id=get_tenant_label(active_tenant), cache_hit="true").observe(time.time() - start_req)
+            TOTAL_REQUEST_LATENCY.labels(
+                tenant_id=get_tenant_label(active_tenant), cache_hit="true"
+            ).observe(time.time() - start_req)
             self._update_gauges()
-            return {
-                "answer": response,
-                "cache_hit": True,
-                "source": "L2"
-            }
+            return {"answer": response, "cache_hit": True, "source": "L2"}
         else:
-            TOTAL_REQUEST_LATENCY.labels(tenant_id=get_tenant_label(active_tenant), cache_hit="false").observe(time.time() - start_req)
+            TOTAL_REQUEST_LATENCY.labels(
+                tenant_id=get_tenant_label(active_tenant), cache_hit="false"
+            ).observe(time.time() - start_req)
             self._update_gauges()
-            return {
-                "answer": response,
-                "cache_hit": False,
-                "source": "LLM"
-            }
+            return {"answer": response, "cache_hit": False, "source": "LLM"}
 
     def _update_gauges(self) -> None:
         try:
-            from rag_cache.core.observability import CACHE_ENTRIES, REDIS_MEMORY_BYTES, FAISS_VECTORS_TOTAL
+            from rag_cache.core.observability import (
+                CACHE_ENTRIES,
+                FAISS_VECTORS_TOTAL,
+                REDIS_MEMORY_BYTES,
+            )
             from rag_cache.integrations.key_value_stores.redis import RedisKeyValueStore
+
             if isinstance(self.kv, RedisKeyValueStore):
                 CACHE_ENTRIES.set(self.kv.client.dbsize())
                 info = self.kv.client.info("memory")
                 REDIS_MEMORY_BYTES.set(info.get("used_memory", 0))
-            
+
             # Get ntotal from vector store
             if hasattr(self.generation_layer.vector_store, "index"):
                 FAISS_VECTORS_TOTAL.set(self.generation_layer.vector_store.index.ntotal)

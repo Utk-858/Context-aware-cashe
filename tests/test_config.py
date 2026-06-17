@@ -1,7 +1,10 @@
 import os
 import tempfile
+
 import pytest
+
 from rag_cache import RAGCache, RAGCacheConfig
+
 
 def test_default_config():
     """Verify default config values."""
@@ -12,6 +15,7 @@ def test_default_config():
     assert config.l2_ttl_seconds == 1209600
     assert config.min_embedding_similarity == 0.85
     assert config.min_document_overlap == 0.85
+
 
 def test_yaml_config_load():
     """Verify loading from a YAML config file."""
@@ -39,6 +43,7 @@ min_document_overlap: 0.75
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+
 def test_env_overrides(monkeypatch):
     """Verify that environment variables override defaults and YAML configurations."""
     yaml_content = """
@@ -58,7 +63,7 @@ min_embedding_similarity: 0.92
         monkeypatch.setenv("SIMILARITY_THRESHOLD", "0.68")
 
         config = RAGCacheConfig.load(config_path=temp_path)
-        
+
         # Verify env overrides YAML/defaults
         assert config.redis_url == "redis://env-redis:6379/1"
         assert config.l1_ttl_seconds == 999
@@ -68,18 +73,17 @@ min_embedding_similarity: 0.92
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+
 def test_facade_kwarg_overrides(monkeypatch):
     """Verify constructor kwargs take highest precedence."""
     monkeypatch.setenv("REDIS_URL", "redis://env-redis:6379/1")
-    
+
     # Instantiate facade with explicit kwargs overriding everything
-    cache = RAGCache(
-        redis_url="redis://kwarg-redis:6379/5",
-        use_local_embeddings=False
-    )
-    
+    cache = RAGCache(redis_url="redis://kwarg-redis:6379/5", use_local_embeddings=False)
+
     assert cache.config.redis_url == "redis://kwarg-redis:6379/5"
     assert cache.config.use_local_embeddings is False
+
 
 def test_facade_from_config():
     """Verify instantiating the facade directly from a YAML config file."""

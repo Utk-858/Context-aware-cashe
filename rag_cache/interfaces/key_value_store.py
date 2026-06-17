@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 
 class KeyValueStore(ABC):
     @abstractmethod
@@ -11,7 +12,13 @@ class KeyValueStore(ABC):
         pass
 
     @abstractmethod
-    def set(self, key: str, value: Dict[str, Any], ttl_seconds: Optional[int] = None, tenant_id: Optional[str] = None) -> None:
+    def set(
+        self,
+        key: str,
+        value: Dict[str, Any],
+        ttl_seconds: Optional[int] = None,
+        tenant_id: Optional[str] = None,
+    ) -> None:
         """Store the generated response and metadata for a given key, with an optional Time-To-Live."""
         pass
 
@@ -25,7 +32,9 @@ class KeyValueStore(ABC):
         """Check if a specific key exists in the cache. Returns True if it exists."""
         pass
 
-    def acquire_lock(self, key: str, value: str, expire_ms: int, tenant_id: Optional[str] = None) -> bool:
+    def acquire_lock(
+        self, key: str, value: str, expire_ms: int, tenant_id: Optional[str] = None
+    ) -> bool:
         """
         Acquires a lease lock. Returns True if acquired, False otherwise.
         Defaults to True to allow execution to proceed if locking is unsupported.
@@ -35,4 +44,3 @@ class KeyValueStore(ABC):
     def release_lock(self, key: str, value: str, tenant_id: Optional[str] = None) -> bool:
         """Releases the lease lock. Defaults to True."""
         return True
-
