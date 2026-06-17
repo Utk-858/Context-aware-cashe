@@ -4,15 +4,14 @@ import os
 # Add the project root to the python path so it runs out-of-the-box
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from rag_cache.core.cache import RAGCache
-from rag_cache.core.models import ResolveInput, StoreInput
-from rag_cache.core.decision_engine import DecisionEngine
+from rag_cache import GenerationCache as RAGCache, ResolveInput, StoreInput
+from rag_cache.core.decision_engine import DecisionEngine, DecisionRuleConfig
 from rag_cache.core.default_intent import RuleBasedIntentClassifier
 
 # Import our available integrations
 from rag_cache.integrations.embeddings.mock import MockEmbedder
 from rag_cache.integrations.vector_stores.in_memory import InMemoryVectorStore
-from rag_cache.integrations.key_value_stores.in_memory import InMemoryKeyValueStore
+from rag_cache.integrations.key_value_stores.redis import RedisKeyValueStore
 
 def main():
     print("--- 1. Initializing RAGCache ---")
@@ -21,9 +20,9 @@ def main():
     cache = RAGCache(
         embedder=MockEmbedder(),
         vector_store=InMemoryVectorStore(),
-        kv_store=InMemoryKeyValueStore(),
+        kv_store=RedisKeyValueStore(),
         intent_classifier=RuleBasedIntentClassifier(),
-        decision_engine=DecisionEngine()
+        decision_engine=DecisionEngine(config=DecisionRuleConfig(min_embedding_similarity=0.65))
     )
 
     query = "What is our company's Q3 revenue?"

@@ -1,15 +1,85 @@
-[tool.poetry]
-name = "rag_cache"
-version = "0.1.0"
-description = "A clean, extensible cache for RAG (Retrieval-Augmented Generation) applications."
-authors = ["Your Name <you@example.com>"]
-readme = "README.md"
-packages = [{include = "rag_cache"}]
-
-[tool.poetry.dependencies]
-python = "^3.10"
-pydantic = "^2.0.0"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rag-cache"
+version = "0.1.0"
+description = "A context-aware, multi-level caching system for Retrieval-Augmented Generation (RAG) applications."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "RAGCache Authors", email = "maintainers@ragcache.org" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "redis>=5.0.0",
+    "prometheus-client>=0.17.0",
+]
+
+[project.optional-dependencies]
+faiss = [
+    "faiss-cpu>=1.7.4",
+    "numpy>=1.20.0",
+]
+embeddings = [
+    "sentence-transformers>=2.2.2",
+]
+all = [
+    "faiss-cpu>=1.7.4",
+    "numpy>=1.20.0",
+    "sentence-transformers>=2.2.2",
+]
+perf = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Utk-858/Context-aware-cashe"
+Repository = "https://github.com/Utk-858/Context-aware-cashe"
+Bug-Tracker = "https://github.com/Utk-858/Context-aware-cashe/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rag_cache"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3

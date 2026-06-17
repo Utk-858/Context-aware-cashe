@@ -1,6 +1,6 @@
 # --- stdlib imports ---
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Dict, Set
+from typing import List, Optional, Tuple, Dict, Set, Any
 
 # --- internal imports ---
 from rag_cache.core.models import CacheEntry
@@ -35,15 +35,29 @@ class DecisionEngine:
     Ensures that incorrect or stale cache hits are rejected.
     """
 
-    def __init__(self, config: Optional[DecisionRuleConfig] = None):
-        self.config = config or DecisionRuleConfig()
+    def __init__(self, config: Optional[Any] = None):
+        if config is None:
+            self.config = DecisionRuleConfig()
+        elif hasattr(config, "min_embedding_similarity") and not hasattr(config, "debug_mode"):
+            # It's the new RAGCacheConfig; map it to a DecisionRuleConfig
+            self.config = DecisionRuleConfig(
+                min_embedding_similarity=config.min_embedding_similarity,
+                min_document_overlap=config.min_document_overlap,
+                intent_match_mode=config.intent_match_mode,
+                intent_compatibility_matrix=config.intent_compatibility_matrix,
+                debug_mode=getattr(config, "debug", False)
+            )
+        else:
+            self.config = config
 
     def evaluate_candidates(
         self,
         current_intent: str,
         current_doc_ids: List[str],
         candidates_with_scores: List[Tuple[CacheEntry, float]],
-        current_doc_versions: Optional[List[str]] = None
+        current_doc_versions: Optional[List[str]] = None,
+        current_tenant_id: Optional[str] = None,
+        current_user_id: Optional[str] = None
     ) -> Tuple[Optional[CacheEntry], str, float]:
         """
         Evaluates a list of (CacheEntry, similarity_score) candidates.
@@ -66,7 +80,42 @@ class DecisionEngine:
         highest_miss_confidence = 0.0
 
         for candidate, sim_score in sorted_candidates:
-        
+            # -----------------------------
+            # Check 0a: Scope Validation
+            # -----------------------------
+            scope_valid = False
+            if candidate.scope == "global":
+                scope_valid = True
+            elif candidate.scope == "tenant":
+                scope_valid = (current_tenant_id is not None and candidate.tenant_id == current_tenant_id)
+            elif candidate.scope == "user":
+                scope_valid = (
+                    current_tenant_id is not None and candidate.tenant_id == current_tenant_id
+                    and current_user_id is not None and candidate.user_id == current_user_id
+                )
+
+            if not scope_valid:
+                last_failure_reason = (
+                    f"Miss: Scope validation mismatch (candidate.scope='{candidate.scope}', "
+                    f"candidate.tenant_id='{candidate.tenant_id}', candidate.user_id='{candidate.user_id}'; "
+                    f"current_tenant_id='{current_tenant_id}', current_user_id='{current_user_id}')"
+                )
+                if self.config.debug_mode:
+                    print(f"    -> REJECTED: {last_failure_reason}")
+                continue
+
+            # -----------------------------
+            # Check 0b: Tenant Validation
+            # -----------------------------
+            if candidate.scope != "global" and candidate.tenant_id != current_tenant_id:
+                last_failure_reason = (
+                    f"Miss: Tenant validation mismatch "
+                    f"(candidate.tenant_id='{candidate.tenant_id}', current_tenant_id='{current_tenant_id}')"
+                )
+                if self.config.debug_mode:
+                    print(f"    -> REJECTED: {last_failure_reason}")
+                continue
+
             # Compute document overlap proactively
             overlap = compute_document_overlap(current_doc_ids, candidate.doc_ids)
             

@@ -1,547 +1,167 @@
-# Context-aware-cache — Detailed Architecture & Internal Working
+# RAGCache
+
+[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-blue.svg)](https://pypi.org/project/rag-cache/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://pypi.org/project/rag-cache/)
+[![CI Build Status](https://github.com/Utk-858/Context-aware-cashe/actions/workflows/ci.yml/badge.svg)](https://github.com/Utk-858/Context-aware-cashe/actions/workflows/ci.yml)
+
+RAGCache is a **context-aware, multi-level caching system** designed to accelerate and optimize Retrieval-Augmented Generation (RAG) pipelines. Unlike traditional exact-match KV caches, RAGCache utilizes semantic similarity, context stability validation, and user intent classification to safely reuse LLM responses while strictly preserving correctness.
 
 ---
 
-# Overview
+## 🚀 Key Features
 
-RAGCache is a **context-aware, multi-level caching system** designed for Retrieval-Augmented Generation (RAG) pipelines.
-
-Unlike traditional caches, it ensures:
-
-* Correctness (no wrong reuse)
-* Performance (reduces LLM calls)
-* Intelligence (uses semantic + context + intent signals)
+* **Dual-Layer Caching (L1 & L2)**:
+  - **L1 (Retrieval Cache)**: Low-latency exact-match string cache mapping queries directly to document IDs, bypassing heavy vector search lookups.
+  - **L2 (Generation Cache)**: High-performance semantic cache mapping queries and contexts to LLM responses.
+* **Context Stability Validation**: Analyzes document overlaps using Jaccard Similarity to reject cache hits if retrieved context documents have drifted.
+* **Intent-Aware Caching**: Classifies queries (e.g. action, informational) to bypass caching automatically for mutation operations.
+* **Strict Tenant Isolation**: Restricts cache retrieval scope dynamically to prevent context leakages across different users and tenants.
+* **Prometheus Observability**: Native latency histograms, cache hit-rate counters, and memory tracking.
+* **Optimization ROI**: Speeds up RAG pipelines by **2.3x** and reduces API token costs by up to **60%** with zero loss in contextual accuracy.
 
 ---
 
-# Developer Integration (Plug-and-Play)
+## 📐 Architecture Overview
 
-## How to Use RAGCache in Your Existing Pipeline
-
-### Before (Traditional RAG Pipeline)
-
-<img src="https://res.cloudinary.com/dqskebjcf/image/upload/v1776038409/cashe1_zg74ca.png" alt="Traditional RAG Pipeline Architecture" width="700">
-*Every single query blindly pays the latency and monetary penalty of querying both external networks.*
-
-```python
-doc_ids = retriever(query)
-response = llm(query, doc_ids)
-return response
+```
+                        User Query
+                            │
+                            ▼
+                    ┌──────────────┐
+                    │  L1 Cache    ├─────────► Hit (Yields Doc IDs)
+                    └──────┬───────┘                 │
+                           │ Miss                    │
+                           ▼                         │
+                    ┌──────────────┐                 │
+                    │ Vector DB    │◄────────────────┘
+                    └──────┬───────┘
+                           │ doc_ids
+                           ▼
+                    ┌──────────────┐
+                    │  L2 Cache    ├─────────► Hit (Returns LLM Response)
+                    └──────┬───────┘
+                           │ Miss
+                           ▼
+                    ┌──────────────┐
+                    │  Expensive   │
+                    │   LLM API    │
+                    └──────────────┘
 ```
 
+For a deep dive into caching layers and algorithms, read the [Architecture Guide](file:///Users/utkarshbansal/Context-aware-cashe/docs/architecture.md).
+
 ---
 
-### After (With RAGCache)
+## 📦 Installation
 
-<img src="https://res.cloudinary.com/dqskebjcf/image/upload/q_auto/f_auto/v1776038409/cashe2_ghyrbk.png" alt="RAGCache Optimized Architecture" width="700">
+Install the core library (includes Redis support and Prometheus telemetry):
+```bash
+pip install rag-cache
+```
+
+### Optional Backends:
+- **Local FAISS Vector DB**:
+  ```bash
+  pip install "rag-cache[faiss]"
+  ```
+- **Local Sentence-Transformers Embeddings**:
+  ```bash
+  pip install "rag-cache[embeddings]"
+  ```
+- **Full Installation (All Backends)**:
+  ```bash
+  pip install "rag-cache[all]"
+  ```
+
+---
+
+## ⚡ Quick Start
+
+Get running in less than 2 minutes using our high-level facade:
 
 ```python
-from rag_cache.facade import UnifiedRAGCache
+from rag_cache import RAGCache
 
-cache = UnifiedRAGCache()
+# Initialize dual-layer cache facade
+cache = RAGCache()
 
+# Wrap your existing RAG execution function
+def query_rag_pipeline(query: str):
+    # Pass query, retriever callback, and LLM callback
+    result = cache.run(
+        query=query,
+        retriever=lambda q: ["doc_abc", "doc_xyz"],
+        llm=lambda q, doc_ids: "Context-aware systems ensure LLM correctness."
+    )
+    return result["answer"]
+
+# Executes LLM call (miss)
+print(query_rag_pipeline("What is context-aware caching?"))
+
+# Returns cached response immediately (semantic hit!)
+print(query_rag_pipeline("Explain context-aware caching."))
+```
+
+For more execution models and advanced configurations, see the [Quick Start Guide](file:///Users/utkarshbansal/Context-aware-cashe/docs/quickstart.md).
+
+---
+
+## ⚙️ Configuration
+
+RAGCache supports configuration loading with the following precedence:
+1. **Keyword overrides** in constructor (e.g. `RAGCache(redis_url="...")`).
+2. **Environment variables** (`REDIS_URL`, `L1_TTL`, `L2_TTL`, `SIMILARITY_THRESHOLD`).
+3. **YAML configuration file** (e.g. loaded via `RAGCache.from_config("config.yaml")`).
+4. **Built-in defaults**.
+
+See [config_example.yaml](file:///Users/utkarshbansal/Context-aware-cashe/examples/config_example.yaml) for a complete template configuration.
+
+---
+
+## 🔒 Tenant Isolation
+
+Ensure user data boundaries are strictly isolated by passing a `tenant_id` to caching endpoints:
+
+```python
 result = cache.run(
     query=query,
-    retriever=retriever,
-    llm=llm
+    retriever=retriever_fn,
+    llm=llm_fn,
+    tenant_id="customer_company_a",
+    scope="tenant"  # Options: "tenant" (default), "user", or "global"
 )
-
-return result["answer"]
 ```
+
+For details on namespacing strategies in Redis, see [Architecture Guide](file:///Users/utkarshbansal/Context-aware-cashe/docs/architecture.md).
 
 ---
 
-## What Developer Needs to Provide
+## 📊 Metrics & Telemetry
 
+RAGCache collects statistics out-of-the-box using Prometheus:
+- Cache hits/misses split by L1 and L2 layers.
+- Operational latency histograms for Redis, FAISS, and Embeddings.
+- Eviction count and Redis memory usage.
+
+To enable the HTTP telemetry server, set the `prometheus_port` config parameter:
+```python
+cache = RAGCache(prometheus_port=8000)
 ```
-1. retriever(query) → List[doc_ids]
-2. llm(query, doc_ids) → response
-```
+Scrape metrics at `http://localhost:8000/metrics`. We provision pre-built Grafana dashboards under `config/grafana/dashboards`.
 
 ---
 
-## What RAGCache Handles Automatically
+## 🧪 Calibration & Benchmarking
 
-* L1 caching (retrieval optimization)
-* L2 caching (LLM response reuse)
-* Semantic similarity search
-* Context validation (doc overlap)
-* Intent matching
-* Storage (KV + Vector store)
-* Eviction (LRU)
+To optimize caching threshold parameters for your specific RAG datasets, run the offline calibration script:
+```bash
+python tools/calibration/calibrate.py
+```
+This runs a threshold sweep to recommend optimal parameters under **Safety-First**, **Max F1**, and **Balanced** profiles. Read the [Benchmark Documentation](file:///Users/utkarshbansal/Context-aware-cashe/docs/benchmarks.md) for more details.
 
 ---
 
-## Internal Execution Flow (From Developer POV)
+## 📄 License
 
-```
-cache.run(query)
-   ↓
-L1 Cache → doc_ids?
-   ↓
-MISS → retriever(query)
-   ↓
-L2 Cache → response?
-   ↓
-MISS → llm(query, doc_ids)
-   ↓
-Store → (L1 + L2)
-   ↓
-Return response
-```
-
----
-
-## Key Benefit
-
-> Wrap your existing RAG pipeline with a single function call and automatically reduce LLM calls while preserving correctness.
-
----
-
-# High-Level Architecture
-
-<img src="https://res.cloudinary.com/dqskebjcf/image/upload/v1776038732/cashe4_mrgssh.png" alt="Full RAGCache System Architecture Flowchart" width="700">
-
----
-
-# Core Modules
-
-## 1. UnifiedRAGCache (Facade)
-
-### Purpose
-
-* Entry point for developers
-* Orchestrates full pipeline
-
-### Responsibilities
-
-* Call L1 cache
-* Call retriever if needed
-* Call L2 cache
-* Call LLM fallback
-* Store results
-
----
-
-## 2. L1 Cache (Retrieval Cache)
-
-### Purpose
-
-* Cache mapping: `query → doc_ids`
-* Avoid repeated vector DB calls
-
-### Storage
-
-* KV Store
-
-### What it stores
-
-```
-Key: "l1:<query>"
-Value: [doc_ids]
-```
-
-### Implementation
-
-* Uses KV store (dictionary / Redis)
-* Exact string match
-
----
-
-### L1 HIT Flow
-
-```
-Query → KV lookup → doc_ids found
-→ skip retriever
-```
-
----
-
-### L1 MISS Flow
-
-```
-Query → KV lookup → not found
-→ call retriever
-→ store in KV
-```
-
----
-
-# 3. L2 Cache (Generation Cache)
-
-### Purpose
-
-* Cache mapping: `(query + context) → response`
-* Avoid expensive LLM calls
-
----
-
-### Storage Split
-
-#### Vector Store
-
-Stores:
-
-```
-embedding(query) + metadata
-```
-
-#### KV Store
-
-Stores:
-
-```
-cache_id → response
-```
-
----
-
-### Metadata stored in vector store
-
-```
-{
-  cache_id: "abc123",
-  doc_ids: [...],
-  intent: "informational"
-}
-```
-
----
-
-# L2 HIT Flow
-
-```
-Query
-  ↓
-Embedding
-  ↓
-Vector search (top-k similar queries)
-  ↓
-Decision Engine
-  ↓
-Best candidate selected
-  ↓
-Fetch response from KV store
-  ↓
-Return response
-```
-
----
-
-# L2 MISS Flow
-
-```
-Query
-  ↓
-Embedding
-  ↓
-Vector search
-  ↓
-Decision Engine rejects all
-  ↓
-Call LLM
-  ↓
-Store in KV + Vector store
-  ↓
-Return response
-```
-
----
-
-# 4. Decision Engine (Core Logic)
-
-### Purpose
-
-Determine whether cached response is safe to reuse
-
----
-
-## Inputs
-
-* Query embedding
-* Candidate embeddings
-* Document IDs
-* Intent
-
----
-
-## Decision Rule
-
-```
-IF
-  similarity ≥ threshold
-AND
-  doc_overlap ≥ threshold
-AND
-  intent_match == True
-
-→ HIT
-ELSE → MISS
-```
-
----
-
-# 5. Similarity Calculation
-
-### Method: Cosine Similarity
-
-```
-similarity = dot(A, B) / (||A|| × ||B||)
-```
-
-Where:
-
-* A = query embedding
-* B = candidate embedding
-
----
-
-### Range
-
-```
--1 to 1
-```
-
----
-
-### Interpretation
-
-| Value   | Meaning      |
-| ------- | ------------ |
-| 0.9+    | very similar |
-| 0.7–0.9 | moderate     |
-| <0.7    | weak         |
-
----
-
-# 6. Document Overlap Calculation
-
-### Method: Jaccard Similarity
-
-```
-overlap = |intersection(doc_ids)| / |union(doc_ids)|
-```
-
----
-
-### Example
-
-```
-A = [d1, d2]
-B = [d1, d3]
-
-intersection = 1
-union = 3
-
-overlap = 1/3 ≈ 0.33
-```
-
----
-
-### Purpose
-
-* Ensures same context
-* Prevents reuse across different documents
-
----
-
-# 7. Intent Matching
-
-### Purpose
-
-Ensure query intent matches
-
----
-
-### Types
-
-* informational
-* action
-* analytical
-* navigation
-
----
-
-### Matching Rule
-
-```
-strict → exact match required
-relaxed → compatible intents allowed
-```
-
----
-
-### Example
-
-```
-"What is policy?" → informational
-"Apply policy" → action
-
-→ NOT compatible
-```
-
----
-
-# 8. KV Store (Detailed)
-
-### Purpose
-
-* Store actual responses
-* Store L1 mappings
-
----
-
-### Stores
-
-#### L1
-
-```
-query → doc_ids
-```
-
-#### L2
-
-```
-cache_id → response
-```
-
----
-
-### Implementation
-
-* Python dict (dev)
-* Redis (production)
-
----
-
-### Features
-
-* O(1) lookup
-* LRU eviction (if enabled)
-
----
-
-# 9. Vector Store (Detailed)
-
-### Purpose
-
-* Find semantically similar queries
-
----
-
-### Stores
-
-```
-embedding + metadata
-```
-
----
-
-### Implementation
-
-* InMemory (list + cosine similarity)
-* FAISS (production)
-
----
-
-### Query Process
-
-```
-query → embedding → similarity search → top-k results
-```
-
----
-
-# 10. End-to-End Flow
-
-```
-Query
- ↓
-[L1 Cache]
- ↓ hit? → doc_ids
- ↓ miss
-Retriever
- ↓
-doc_ids
- ↓
-[L2 Cache]
- ↓ hit? → response
- ↓ miss
-LLM
- ↓
-Response
- ↓
-Store in L1 + L2
-```
-
----
-
-# 11. Eviction (LRU)
-
-### Purpose
-
-* Limit memory usage
-
----
-
-### Strategy
-
-```
-if size > max_entries:
-    remove least recently used entry
-```
-
----
-
-### Important
-
-* Remove from KV store
-* Remove from vector store
-
----
-
-# 12. Key Design Principles
-
-* Separation of concerns
-* Context-aware validation
-* Safety over hit-rate
-* Pluggable architecture
-
----
-
-# Benchmarks & Performance ROI
-
-We simulated a realistic RAG workload mixing **Pioneering Queries** (new topics), **Semantic Queries** (differently worded but logically identical), and **Repetitive Queries** (exact string repeats) across 10 execution cycles using our standard test dataset.
-
-### Results without caching (Baseline):
-* **Execution Strategy:** 10 Vector DB lookups + 10 LLM Generative calls
-* **Total Latency:** ~15.00 seconds
-
-### Results with RAGCache (L1 + L2 Dual-Layer):
-* **Execution Strategy:** 4 Vector DB lookups + 4 LLM Generative calls 
-* **Total Latency:** ~6.50 seconds
-
-### Optimization Impact
-* **Speedup Factor:** Pipeline executes **2.3x Faster**.
-* **Cost Savings:** OpenAI/Anthropic API token burn rate reduced by **60% ELIMINATION RATE** with absolutely zero loss in contextual accuracy.
-* **Latency Mitigation:** Absorbed ~8.5 seconds of raw user wait time natively.
-
----
-
-# Final Summary
-
-RAGCache is:
-
-> A multi-level, context-aware caching system that safely reuses LLM responses using semantic similarity, document overlap, and intent validation.
-
----
-
-# Future Improvements
-
-* TTL-based eviction
-* Adaptive thresholds
-* Distributed caching (Redis cluster)
-* FAISS disk indexing
-* Feedback-based learning
-
----
+This project is licensed under the MIT License. See [LICENSE](file:///Users/utkarshbansal/Context-aware-cashe/LICENSE) for details.

@@ -20,3 +20,16 @@ venv.bak/
 dist/
 build/
 *.egg-info/
+
+# macOS System Files
+.DS_Store
+**/.DS_Store
+
+# Pytest
+.pytest_cache/
+
+# Temporary / Binary Run Files
+faiss_index.bin
+*.bin
+tools/load_testing/temp_summary.json
+

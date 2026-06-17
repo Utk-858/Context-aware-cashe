@@ -8,25 +8,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # rag_cache imports
 from rag_cache.core.cache import RetrievalCache, GenerationCache
 from rag_cache.core.models import ResolveInput, StoreInput
-from rag_cache.core.decision_engine import DecisionEngine
+from rag_cache.core.decision_engine import DecisionEngine, DecisionRuleConfig
 from rag_cache.core.default_intent import RuleBasedIntentClassifier
 from rag_cache.integrations.embeddings.sentence_transformer import SentenceTransformerEmbedder
 from rag_cache.integrations.vector_stores.in_memory import InMemoryVectorStore
-from rag_cache.integrations.key_value_stores.in_memory import InMemoryKeyValueStore
+from rag_cache.integrations.key_value_stores.redis import RedisKeyValueStore
 
 # ---------------------------------------------------------
 # 1. Initialize Cache Layers
 # ---------------------------------------------------------
 print("Loading SentenceTransformer weights (may take a moment on first run)...")
 
-# Setup synchronized Garbage Collection across Cache Layers
+# Setup synchronized DBs (Redis handles its own eviction)
 vector_db = InMemoryVectorStore()
-
-def on_lru_evict(cache_id: str):
-    print(f"[Garbage Collection] LRU evicted Key '{cache_id}'. Pruning from Vector DB...")
-    vector_db.delete(cache_id)
-
-shared_kv = InMemoryKeyValueStore(max_entries=1000, on_evict=on_lru_evict)
+shared_kv = RedisKeyValueStore()
 
 # L1: Retrieval Cache (Lightweight string lookup wrapper for KV Store)
 retrieval_cache = RetrievalCache(kv_store=shared_kv)
@@ -37,7 +32,7 @@ generation_cache = GenerationCache(
     vector_store=vector_db,
     kv_store=shared_kv,
     intent_classifier=RuleBasedIntentClassifier(),
-    decision_engine=DecisionEngine(),
+    decision_engine=DecisionEngine(config=DecisionRuleConfig(min_embedding_similarity=0.65)),
     debug_mode=True  # <--- Explicit Tracing Enabled
 )
 

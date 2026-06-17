@@ -8,8 +8,15 @@ class ResolveInput:
     query: str
     doc_ids: List[str]
     intent: str = "default"
+    tenant_id: Optional[str] = None
+    user_id: Optional[str] = None
+    scope: str = "tenant"
     doc_versions: Optional[List[str]] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.tenant_id is None:
+            self.scope = "global"
 
 
 @dataclass
@@ -19,8 +26,15 @@ class StoreInput:
     response: str
     doc_ids: List[str]
     intent: str = "default"
+    tenant_id: Optional[str] = None
+    user_id: Optional[str] = None
+    scope: str = "tenant"
     doc_versions: Optional[List[str]] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.tenant_id is None:
+            self.scope = "global"
 
 
 @dataclass
@@ -30,9 +44,16 @@ class CacheEntry:
     response: str
     doc_ids: List[str]
     intent: str
+    tenant_id: Optional[str] = None
+    user_id: Optional[str] = None
+    scope: str = "tenant"
     doc_versions: Optional[List[str]] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
+
+    def __post_init__(self):
+        if self.tenant_id is None:
+            self.scope = "global"
 
 
 @dataclass

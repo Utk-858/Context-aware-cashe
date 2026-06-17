@@ -7,11 +7,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from rag_cache.core.cache import RetrievalCache, GenerationCache
 from rag_cache.core.models import ResolveInput, StoreInput
-from rag_cache.core.decision_engine import DecisionEngine
+from rag_cache.core.decision_engine import DecisionEngine, DecisionRuleConfig
 from rag_cache.core.default_intent import RuleBasedIntentClassifier
 from rag_cache.integrations.embeddings.sentence_transformer import SentenceTransformerEmbedder
 from rag_cache.integrations.vector_stores.in_memory import InMemoryVectorStore
-from rag_cache.integrations.key_value_stores.in_memory import InMemoryKeyValueStore
+from rag_cache.integrations.key_value_stores.redis import RedisKeyValueStore
 
 # ---------------------------------------------------------
 # Sample Dataset
@@ -65,13 +65,15 @@ def run_with_cache():
     print(f"\n[2/2] Running Optimized Pipeline (RAGCache) over {len(SAMPLE_QUERIES)} queries...")
     
     print("      -> Initializing Semantic Embedder...")
-    retrieval_cache = RetrievalCache(kv_store=InMemoryKeyValueStore())
+    shared_kv = RedisKeyValueStore()
+    shared_kv.client.flushdb()
+    retrieval_cache = RetrievalCache(kv_store=shared_kv)
     generation_cache = GenerationCache(
         embedder=SentenceTransformerEmbedder(model_name="all-MiniLM-L6-v2"),
         vector_store=InMemoryVectorStore(),
-        kv_store=InMemoryKeyValueStore(),
+        kv_store=shared_kv,
         intent_classifier=RuleBasedIntentClassifier(),
-        decision_engine=DecisionEngine(),
+        decision_engine=DecisionEngine(config=DecisionRuleConfig(min_embedding_similarity=0.65)),
         debug_mode=False
     )
     
