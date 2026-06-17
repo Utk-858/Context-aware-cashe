@@ -6,8 +6,13 @@ import pytest
 from rag_cache import RAGCache, RAGCacheConfig
 
 
-def test_default_config():
+def test_default_config(monkeypatch):
     """Verify default config values."""
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.delenv("L1_TTL", raising=False)
+    monkeypatch.delenv("L2_TTL", raising=False)
+    monkeypatch.delenv("SIMILARITY_THRESHOLD", raising=False)
+
     config = RAGCacheConfig.load()
     assert config.redis_url == "redis://localhost:6379/0"
     assert config.use_faiss is False
@@ -17,8 +22,13 @@ def test_default_config():
     assert config.min_document_overlap == 0.85
 
 
-def test_yaml_config_load():
+def test_yaml_config_load(monkeypatch):
     """Verify loading from a YAML config file."""
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.delenv("L1_TTL", raising=False)
+    monkeypatch.delenv("L2_TTL", raising=False)
+    monkeypatch.delenv("SIMILARITY_THRESHOLD", raising=False)
+
     yaml_content = """
 redis_url: "redis://my-redis-host:6379/2"
 use_faiss: true
@@ -85,8 +95,13 @@ def test_facade_kwarg_overrides(monkeypatch):
     assert cache.config.use_local_embeddings is False
 
 
-def test_facade_from_config():
+def test_facade_from_config(monkeypatch):
     """Verify instantiating the facade directly from a YAML config file."""
+    monkeypatch.delenv("REDIS_URL", raising=False)
+    monkeypatch.delenv("L1_TTL", raising=False)
+    monkeypatch.delenv("L2_TTL", raising=False)
+    monkeypatch.delenv("SIMILARITY_THRESHOLD", raising=False)
+
     yaml_content = """
 redis_url: "redis://yaml-facade:6379/3"
 use_faiss: false
