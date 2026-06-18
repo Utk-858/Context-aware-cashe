@@ -1,6 +1,6 @@
 # RAGCache Release & Versioning Guide
 
-This document describes the semantic versioning strategy, installation patterns, and the step-by-step checklist to prepare and publish the `rag-cache` package on PyPI.
+This document describes the semantic versioning strategy, installation patterns, and the step-by-step checklist to prepare and publish the `rag-cachex` package on PyPI.
 
 ---
 
@@ -29,25 +29,25 @@ Once published, users can install RAGCache under various configurations dependin
 ### Core Installation (Minimal Dependencies)
 Installs only core schemas (`pydantic`), the Redis integration (`redis`), and Prometheus telemetry (`prometheus-client`). Fits production pipelines using a remote Redis server and custom/external vector stores or remote embeddings (e.g., OpenAI).
 ```bash
-pip install rag-cache
+pip install rag-cachex
 ```
 
 ### Installation with Local FAISS Support
 Installs core dependencies plus `faiss-cpu` and `numpy` to support local high-performance vector operations.
 ```bash
-pip install "rag-cache[faiss]"
+pip install "rag-cachex[faiss]"
 ```
 
 ### Installation with Offline Embeddings Support
 Installs core dependencies plus `sentence-transformers` to run offline local embeddings natively on the host machine.
 ```bash
-pip install "rag-cache[embeddings]"
+pip install "rag-cachex[embeddings]"
 ```
 
 ### Complete Installation (All Backends)
 Installs all of the above optional backends.
 ```bash
-pip install "rag-cache[all]"
+pip install "rag-cachex[all]"
 ```
 
 ### Editable Development Installation
@@ -107,7 +107,7 @@ Follow these steps for every release. Do **NOT** publish directly without going 
    ```bash
    python3 -m venv test_env
    source test_env/bin/activate
-   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ rag-cache[all]
+   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ rag-cachex[all]
    ```
 3. [ ] Verify imports and basic quickstart works inside `test_env`:
    ```bash
@@ -121,13 +121,13 @@ Follow these steps for every release. Do **NOT** publish directly without going 
    ```
 2. [ ] Verify publication by installing in a new virtual environment:
    ```bash
-   pip install rag-cache[all]
+   pip install rag-cachex[all]
    ```
 
 ### Step 5: Post-Release Tagging
 1. [ ] Tag the commit in git with release version:
    ```bash
-   git tag -a v0.1.0 -m "Release version 0.1.0"
-   git push origin v0.1.0
+   git tag -a v0.1.2 -m "Release version 0.1.2"
+   git push origin v0.1.2
    ```
 2. [ ] Create a GitHub release under the tagged commit, listing key updates and performance enhancements.

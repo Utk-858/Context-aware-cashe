@@ -88,7 +88,7 @@ class UnifiedRAGCache:
                 warnings.warn(
                     "sentence-transformers not installed. "
                     "Semantic caching is disabled and MockEmbedder will be used. "
-                    "Install with: pip install 'rag-cache[all]'"
+                    "Install with: pip install 'rag-cachex[all]'"
                 )
 
         # -----------------------------

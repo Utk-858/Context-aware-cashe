@@ -9,13 +9,13 @@ Get RAGCache up and running in your Retrieval-Augmented Generation (RAG) applica
 RAGCache requires Python 3.10 or higher. Install the base package with production-ready Redis support:
 
 ```bash
-pip install rag-cache
+pip install rag-cachex
 ```
 
 ### Enable Vector Support (FAISS & sentence-transformers)
 To utilize local FAISS database storage and offline sentence embedding execution natively, install all extra backends:
 ```bash
-pip install "rag-cache[all]"
+pip install "rag-cachex[all]"
 ```
 
 ---

@@ -1,8 +1,8 @@
 # RAGCache
 
-[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-blue.svg)](https://pypi.org/project/rag-cache/)
+[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.2-blue.svg)](https://pypi.org/project/rag-cachex/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://pypi.org/project/rag-cache/)
+[![Python Support](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://pypi.org/project/rag-cachex/)
 [![CI Build Status](https://github.com/Utk-858/Context-aware-cashe/actions/workflows/ci.yml/badge.svg)](https://github.com/Utk-858/Context-aware-cashe/actions/workflows/ci.yml)
 
 RAGCache is a **context-aware, multi-level caching system** designed to accelerate and optimize Retrieval-Augmented Generation (RAG) pipelines. Unlike traditional exact-match KV caches, RAGCache utilizes semantic similarity, context stability validation, and user intent classification to safely reuse LLM responses while strictly preserving correctness.
@@ -57,21 +57,21 @@ For a deep dive into caching layers and algorithms, read the [Architecture Guide
 
 Install the core library (includes Redis support and Prometheus telemetry):
 ```bash
-pip install rag-cache
+pip install rag-cachex
 ```
 
 ### Optional Backends:
 - **Local FAISS Vector DB**:
   ```bash
-  pip install "rag-cache[faiss]"
+  pip install "rag-cachex[faiss]"
   ```
 - **Local Sentence-Transformers Embeddings**:
   ```bash
-  pip install "rag-cache[embeddings]"
+  pip install "rag-cachex[embeddings]"
   ```
 - **Full Installation (All Backends)**:
   ```bash
-  pip install "rag-cache[all]"
+  pip install "rag-cachex[all]"
   ```
 
 ---

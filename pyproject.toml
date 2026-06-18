@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rag-cache"
-version = "0.1.0"
+name = "rag-cachex"
+version = "0.1.2"
 description = "A context-aware, multi-level caching system for Retrieval-Augmented Generation (RAG) applications."
 readme = "README.md"
 requires-python = ">=3.10"
