@@ -33,3 +33,4 @@ faiss_index.bin
 *.bin
 tools/load_testing/temp_summary.json
 
+ragcache-demo-app/
